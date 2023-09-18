@@ -15,7 +15,6 @@ const (
 	CMDExit  string = ":exit"
 	CMDClear string = ":clear"
 	CMDInfo  string = ":info"
-	CMDGet   string = ":get"
 	CMDSet   string = ":set"
 	CMDHelp  string = ":help"
 
@@ -43,15 +42,6 @@ func (sur *Surreal) commandSwitch(input string) {
 		}
 		sur.termScreen.CommandPalette.AddToHistory(input)
 		return
-	case CMDGet:
-		sur.mainPanel.Push(input, &style.Style{ForegroundColor: 59})
-		err := sur.cmdGet(input, args)
-		if err != nil {
-			sur.mainPanel.Push("[error] "+err.Error(), style.DefaultStyleError)
-			return
-		}
-		sur.termScreen.CommandPalette.AddToHistory(input)
-		return
 	case CMDSet:
 		sur.mainPanel.Push(input, &style.Style{ForegroundColor: 59})
 		err := sur.cmdSet(input, args)
@@ -66,7 +56,6 @@ func (sur *Surreal) commandSwitch(input string) {
 		sur.mainPanel.Push("=>  :clear       clear the screen", style.DefaultStyleWarning)
 		sur.mainPanel.Push("=>  :exit        exit the program. you can also use 'Esc' key", style.DefaultStyleWarning)
 		sur.mainPanel.Push("=>  :info        get serial config info", style.DefaultStyleWarning)
-		sur.mainPanel.Push("=>  :get         get value of config field      example: ':get baud'", style.DefaultStyleWarning)
 		sur.mainPanel.Push("=>  :set         set a value to a config field  example: ':set baud 19200'", style.DefaultStyleWarning)
 		sur.mainPanel.Push("all other inputs will directly sent to serial connection", style.DefaultStyleWarning)
 		return
@@ -104,27 +93,17 @@ func (sur *Surreal) cmdInfo(raw string, args []string) error {
 		sur.mainPanel.Push(line, style.DefaultStyleInfo)
 		return true, nil
 	})
-	return nil
-}
-
-func (sur *Surreal) cmdGet(raw string, args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("[error] argument count is not valid for command '%s'", args[0])
-	}
-
-	key := args[1]
-
-	conf, err := json.Marshal(sur.config)
+	settings, err := json.Marshal(sur.settings)
 	if err != nil {
 		return err
 	}
-
-	value, err := jin.GetString(conf, key)
-	if err != nil {
-		return err
-	}
-
-	sur.mainPanel.Push(fmt.Sprintf("=> %s", value), style.DefaultStyleInfo)
+	jin.IterateKeyValue(settings, func(b1, b2 []byte) (bool, error) {
+		key := string(b1)
+		value := string(b2)
+		line := fmt.Sprintf("=>  %s: %s", key, value)
+		sur.mainPanel.Push(line, style.DefaultStyleInfo)
+		return true, nil
+	})
 	return nil
 }
 
@@ -136,10 +115,16 @@ func (sur *Surreal) cmdSet(raw string, args []string) error {
 	key := args[1]
 	value := args[2]
 
-	if !Contains(SettableConfigKeys, key) {
-		return fmt.Errorf("'%s' is a protected field. (read only)", key)
+	if Contains(EditableConfigKeys, key) {
+		return sur.editConfig(key, value)
+	} else if Contains(EditableSettingKeys, key) {
+		return sur.editSetting(key, value)
 	}
 
+	return fmt.Errorf("'%s' is not a settable field. (read only or not exists)", key)
+}
+
+func (sur *Surreal) editConfig(key, value string) error {
 	conf, err := json.Marshal(sur.config)
 	if err != nil {
 		return err
@@ -182,32 +167,77 @@ func (sur *Surreal) cmdSet(raw string, args []string) error {
 
 	return nil
 }
-
-func (sur *Surreal) cmdWrite(raw string, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("[error] argument count is not valid for command '%s'", args[0])
-	}
-
-	msg := raw
-	if !sur.config.NoEOL {
-		arr := IntToByteArray(int64(sur.config.EOL))
-		endOfLine := ""
-		for _, c := range arr {
-			if c == 0 {
-				continue
-			}
-			endOfLine += string(c)
+func (sur *Surreal) editSetting(key, value string) error {
+	if key == "mode" {
+		if value != SystemModeByte && value != SystemModeText {
+			return fmt.Errorf("mode '%s' is not exists. try using 'byte' and 'text' modes", value)
 		}
-		msg += endOfLine
 	}
 
-	_, err := sur.stream.Write([]byte(msg))
+	conf, err := json.Marshal(sur.settings)
 	if err != nil {
 		return err
 	}
 
-	pushDataF(sur, "sent", 81, msg)
+	newConfig, err := jin.SetString(conf, value, key)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(newConfig, &sur.settings)
+	if err != nil {
+		return err
+	}
+
+	sur.mainPanel.Push(fmt.Sprintf("=> %s: %s", key, value), style.DefaultStyleInfo)
+
 	return nil
+}
+
+func (sur *Surreal) cmdWrite(raw string, args []string) error {
+	switch sur.settings.Mode {
+	case SystemModeText:
+		return sur.cmdWriteText(raw, args)
+	case SystemModeByte:
+		return sur.cmdWriteByte(raw, args)
+	}
+	return nil
+}
+
+func (sur *Surreal) cmdWriteText(raw string, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("[error] argument count is not valid for command '%s'", args[0])
+	}
+
+	_, err := sur.stream.Write([]byte(raw))
+	if err != nil {
+		return err
+	}
+
+	raw = sur.correctEOL(raw)
+
+	pushDataF(sur, "sent", 81, raw)
+	return nil
+}
+
+func (sur *Surreal) cmdWriteByte(raw string, args []string) error { return nil }
+
+func (sur *Surreal) correctEOL(raw string) string {
+	if sur.settings.EOLEnable {
+		if sur.settings.EOL == 0 {
+			return raw + string(byte(0))
+		}
+		eol := ""
+		arr := IntToByteArray(int64(sur.settings.EOL))
+		for _, c := range arr {
+			if c == 0 {
+				continue
+			}
+			eol += string(c)
+		}
+		return raw + eol
+	}
+	return raw
 }
 
 func IntToByteArray(num int64) []byte {

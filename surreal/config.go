@@ -1,18 +1,37 @@
 package surreal
 
 var (
-	SettableConfigKeys = []string{
+	EditableConfigKeys = []string{
 		"path",
 		"baud",
 		"size",
 		"parity",
 		"timeout",
 		"stopbits",
+	}
+	EditableSettingKeys = []string{
 		"verbose",
 		"eol",
-		"no-eol",
+		"eol-enable",
+		"mode",
 	}
 )
+
+const (
+	DefaultEOL       uint32 = 0x00
+	DefaultVerbosity bool   = true
+	DefaultEOLEnable bool   = true
+	SystemModeText   string = "text"
+	SystemModeByte   string = "byte"
+	DefaultMode      string = SystemModeText
+)
+
+type Settings struct {
+	Verbose   bool   `json:"verbose"`
+	EOL       uint32 `json:"eol"`
+	EOLEnable bool   `json:"eol-enable"`
+	Mode      string `json:"mode"`
+}
 
 type Config struct {
 	Path     string   `json:"path"`
@@ -21,7 +40,4 @@ type Config struct {
 	Parity   Parity   `json:"parity"`
 	Timeout  Duration `json:"timeout"`
 	StopBits StopBits `json:"stopbits"`
-	Verbose  bool     `json:"verbose"`
-	EOL      uint64   `json:"eol"`
-	NoEOL    bool     `json:"no-eol"`
 }

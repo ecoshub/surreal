@@ -16,6 +16,7 @@ import (
 
 type Surreal struct {
 	config     *Config
+	settings   *Settings
 	stream     *serial.Port
 	termScreen *screen.Screen
 	mainPanel  *panel.Stack
@@ -44,8 +45,6 @@ func ParseConfigFlags() *Config {
 	flag.IntVar(&parity, "parity", DefaultParity, "parity. N|O|E|M|S")
 	flag.DurationVar(&timeout, "timeout", time.Second, "read timeout. default 1 second")
 	flag.IntVar(&stopBits, "stop-bit", DefaultStopBits, "stop bit. 1|15|2. default 1")
-	flag.BoolVar(&c.Verbose, "verbose", true, "verbosity")
-	flag.Uint64Var(&c.EOL, "eol", 12, "carriage return for data transmit operation")
 
 	flag.Parse()
 
@@ -75,7 +74,13 @@ func New(c *Config) (*Surreal, error) {
 	sc.Add(mainPanel, 0, 0)
 
 	sur := &Surreal{
-		config:     c,
+		config: c,
+		settings: &Settings{
+			Verbose:   DefaultVerbosity,
+			EOL:       DefaultEOL,
+			EOLEnable: DefaultEOLEnable,
+			Mode:      DefaultMode,
+		},
 		termScreen: sc,
 		mainPanel:  mainPanel,
 		stop:       make(chan struct{}, 1),

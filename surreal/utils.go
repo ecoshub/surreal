@@ -107,7 +107,7 @@ func Contains(arr []string, element string) bool {
 }
 
 func pushDataF(sur *Surreal, prefix string, color int, raw string) {
-	if sur.config.Verbose {
+	if sur.settings.Verbose {
 		for _, r := range raw {
 			var s string
 			if unicode.IsPrint(r) {
@@ -117,7 +117,7 @@ func pushDataF(sur *Surreal, prefix string, color int, raw string) {
 			}
 			sur.mainPanel.Push(s, &style.Style{ForegroundColor: color})
 		}
-	} else {
-		sur.mainPanel.Push("> "+raw, &style.Style{ForegroundColor: color})
+		return
 	}
+	sur.mainPanel.Push("> "+raw, &style.Style{ForegroundColor: color})
 }
