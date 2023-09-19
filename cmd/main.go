@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"surreal/surreal"
+	sti "sti/internal"
 )
 
 func main() {
-	c := surreal.ParseConfigFlags()
+	c := sti.ParseConfigFlags()
 
-	ph, err := surreal.New(c)
+	ph, err := sti.New(c)
 	if err != nil {
 		fmt.Println(err)
 		return

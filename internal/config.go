@@ -1,4 +1,6 @@
-package surreal
+package sti
+
+import "sti/model"
 
 var (
 	EditableConfigKeys = []string{
@@ -18,11 +20,12 @@ var (
 )
 
 const (
+	SystemModeText string = "text"
+	SystemModeByte string = "byte"
+
 	DefaultEOL       uint32 = 0x00
 	DefaultVerbosity bool   = true
 	DefaultEOLEnable bool   = true
-	SystemModeText   string = "text"
-	SystemModeByte   string = "byte"
 	DefaultMode      string = SystemModeText
 )
 
@@ -34,10 +37,10 @@ type Settings struct {
 }
 
 type Config struct {
-	Path     string   `json:"path"`
-	Baud     int      `json:"baud"`
-	Size     int      `json:"size"`
-	Parity   Parity   `json:"parity"`
-	Timeout  Duration `json:"timeout"`
-	StopBits StopBits `json:"stopbits"`
+	Path     string          `json:"path"`
+	Baud     int             `json:"baud"`
+	Size     int             `json:"size"`
+	Parity   *model.Parity   `json:"parity"`
+	Timeout  *model.Duration `json:"timeout"`
+	StopBits *model.StopBits `json:"stopbits"`
 }

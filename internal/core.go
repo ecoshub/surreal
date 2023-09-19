@@ -1,9 +1,10 @@
-package surreal
+package sti
 
 import (
 	"flag"
 	"fmt"
 	"os"
+	"sti/model"
 	"time"
 
 	"github.com/ecoshub/termium/component/palette"
@@ -14,9 +15,9 @@ import (
 	"github.com/tarm/serial"
 )
 
-type Surreal struct {
+type STI struct {
 	config     *Config
-	settings   *Settings
+	setting    *Settings
 	stream     *serial.Port
 	termScreen *screen.Screen
 	mainPanel  *panel.Stack
@@ -48,17 +49,17 @@ func ParseConfigFlags() *Config {
 
 	flag.Parse()
 
-	c.Parity = Parity{Parity: serial.Parity(parity)}
-	c.Timeout = Duration{Duration: timeout}
-	c.StopBits = StopBits{StopBits: serial.StopBits(stopBits)}
+	c.Timeout = &model.Duration{Duration: timeout}
+	c.Parity = &model.Parity{Parity: serial.Parity(parity), DefaultParity: serial.Parity(DefaultParity)}
+	c.StopBits = &model.StopBits{StopBits: serial.StopBits(stopBits), DefaultStopBits: serial.StopBits(DefaultStopBits)}
 	return c
 }
 
-func New(c *Config) (*Surreal, error) {
+func New(c *Config) (*STI, error) {
 
 	sc, err := screen.New(&screen.Config{
 		CommandPaletteConfig: &palette.Config{
-			Prompt: "surreal-terminal$ ",
+			Prompt: "sti$ ",
 			Style:  &style.Style{ForegroundColor: 154},
 		},
 	})
@@ -73,9 +74,9 @@ func New(c *Config) (*Surreal, error) {
 
 	sc.Add(mainPanel, 0, 0)
 
-	sur := &Surreal{
+	s := &STI{
 		config: c,
-		settings: &Settings{
+		setting: &Settings{
 			Verbose:   DefaultVerbosity,
 			EOL:       DefaultEOL,
 			EOLEnable: DefaultEOLEnable,
@@ -87,22 +88,22 @@ func New(c *Config) (*Surreal, error) {
 	}
 
 	sc.CommandPalette.ListenKeyEventEnter(func(input string) {
-		sur.commandSwitch(input)
+		s.commandSwitch(input)
 	})
 
 	if c.Path != "" {
-		err = sur.Connect(c)
+		err = s.Connect(c)
 		if err != nil {
 			return nil, err
 		}
-		go sur.StartSerial()
-		sur.connected = true
+		go s.StartSerial()
+		s.connected = true
 	}
 
-	return sur, nil
+	return s, nil
 }
 
-func (sur *Surreal) Connect(conf *Config) error {
+func (sti *STI) Connect(conf *Config) error {
 	config := &serial.Config{
 		Name:        conf.Path,
 		Baud:        conf.Baud,
@@ -120,7 +121,7 @@ func (sur *Surreal) Connect(conf *Config) error {
 	config.ReadTimeout = to
 
 	var err error
-	sur.stream, err = serial.OpenPort(config)
+	sti.stream, err = serial.OpenPort(config)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("%s. please pass a valid serial device path.", err.Error())
@@ -128,32 +129,32 @@ func (sur *Surreal) Connect(conf *Config) error {
 		return err
 	}
 
-	sur.connected = true
+	sti.connected = true
 	return nil
 }
 
-func (sur *Surreal) StartSerial() {
-	go sur.reader()
+func (sti *STI) StartSerial() {
+	go sti.reader()
 }
 
-func (sur *Surreal) StartTerminal() {
+func (sti *STI) StartTerminal() {
 	go func() {
 		// wait till terminal screen initialize
 		time.Sleep(time.Millisecond * 250)
-		if !sur.connected {
-			sur.mainPanel.Push(ErrNotConnected.Error(), style.DefaultStyleWarning)
+		if !sti.connected {
+			sti.mainPanel.Push(ErrNotConnected.Error(), style.DefaultStyleWarning)
 		} else {
-			sur.mainPanel.Push("connection success", &style.Style{ForegroundColor: 46})
-			sur.cmdInfo("", nil)
+			sti.mainPanel.Push("connection success", &style.Style{ForegroundColor: 46})
+			sti.cmdInfo("", nil)
 		}
 	}()
-	sur.termScreen.Start()
+	sti.termScreen.Start()
 }
 
-func (sur *Surreal) StopSerial() {
-	if sur.stream == nil {
+func (sti *STI) StopSerial() {
+	if sti.stream == nil {
 		return
 	}
-	sur.stream.Close()
-	sur.stop <- struct{}{}
+	sti.stream.Close()
+	sti.stop <- struct{}{}
 }
