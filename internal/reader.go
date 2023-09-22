@@ -23,7 +23,7 @@ func (sti *STI) reader() {
 					if len(raw) == 0 {
 						continue
 					}
-					pushFormat(sti, ">>", 82, raw)
+					pushFormat(sti, ">>", 46, raw)
 					raw = make([]byte, 0, 32)
 					continue
 				}
@@ -34,7 +34,7 @@ func (sti *STI) reader() {
 			s := readBuffer[:n]
 			raw = append(raw, s...)
 			if bytes.HasSuffix(s, []byte{'\n'}) || bytes.HasSuffix(s, []byte{'\n', '\r'}) {
-				pushFormat(sti, ">>", 82, raw)
+				pushFormat(sti, ">>", 46, raw)
 				raw = make([]byte, 0, 32)
 				continue
 			}

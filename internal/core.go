@@ -144,8 +144,8 @@ func (sti *STI) StartTerminal() {
 		if !sti.connected {
 			sti.mainPanel.Push(ErrNotConnected.Error(), style.DefaultStyleWarning)
 		} else {
-			sti.mainPanel.Push("connection success", &style.Style{ForegroundColor: 46})
-			sti.cmdInfo("", nil)
+			sti.mainPanel.Push("connection success", style.DefaultStyleSuccess)
+			sti.cmdInfo(CMDInfo, []string{})
 		}
 	}()
 	sti.termScreen.Start()

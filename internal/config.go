@@ -20,13 +20,13 @@ var (
 )
 
 const (
-	SystemModeText string = "text"
-	SystemModeByte string = "byte"
+	OutputModeText string = "text"
+	OutputModeChar string = "char"
 
-	DefaultEOL       uint32 = 0x00
-	DefaultVerbosity bool   = true
-	DefaultEOLEnable bool   = true
-	DefaultMode      string = SystemModeText
+	DefaultEOL       uint32 = 0x12
+	DefaultVerbosity bool   = false
+	DefaultEOLEnable bool   = false
+	DefaultMode      string = OutputModeText
 )
 
 type Settings struct {

@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/ecoshub/jin v1.0.0
-	github.com/ecoshub/termium v1.1.6-0.0.0-b
+	github.com/ecoshub/termium v1.1.6-0.0.1-b
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 )
 

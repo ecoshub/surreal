@@ -21,11 +21,16 @@ const (
 	CMDExit  string = ":exit"
 	CMDClear string = ":clear"
 	CMDInfo  string = ":info"
-	CMDSet   string = ":set"
 	CMDHelp  string = ":help"
+	CMDDump  string = ":dump"
+	CMDFlush string = ":flush"
 
 	VerboseDataFormat        string = "[%s] %c 0x%02x 0b%08b %d"
 	VerboseNoPrintDataFormat string = "[%s] . 0x%02x 0b%08b %d"
+)
+
+var (
+	StyleNeutral = &style.Style{ForegroundColor: 59}
 )
 
 func (sti *STI) commandSwitch(input string) {
@@ -35,35 +40,19 @@ func (sti *STI) commandSwitch(input string) {
 
 	switch cmd {
 	case CMDClear:
-		sti.mainPanel.Clear()
-		sti.termScreen.CommandPalette.PromptLine.Clear()
-		sti.termScreen.CommandPalette.AddToHistory(input)
+		sti.cmdClear(input, args)
 		return
 	case CMDInfo:
-		sti.mainPanel.Push(input, &style.Style{ForegroundColor: 59})
-		err := sti.cmdInfo(input, args)
-		if err != nil {
-			sti.mainPanel.Push("[error] "+err.Error(), style.DefaultStyleError)
-			return
-		}
-		sti.termScreen.CommandPalette.AddToHistory(input)
-		return
-	case CMDSet:
-		sti.mainPanel.Push(input, &style.Style{ForegroundColor: 59})
-		err := sti.cmdSet(input, args)
-		if err != nil {
-			sti.mainPanel.Push("[error] "+err.Error(), style.DefaultStyleError)
-			return
-		}
-		sti.termScreen.CommandPalette.AddToHistory(input)
+		sti.cmdInfo(input, args)
 		return
 	case CMDHelp:
-		sti.mainPanel.Push("help (use commands with ':' prefix)", style.DefaultStyleWarning)
-		sti.mainPanel.Push("=>  :clear       clear the screen", style.DefaultStyleWarning)
-		sti.mainPanel.Push("=>  :exit        exit the program. you can also use 'Esc' key", style.DefaultStyleWarning)
-		sti.mainPanel.Push("=>  :info        get serial config info", style.DefaultStyleWarning)
-		sti.mainPanel.Push("=>  :set         set a value to a config field  example: ':set baud 19200'", style.DefaultStyleWarning)
-		sti.mainPanel.Push("all other inputs will directly sent to serial connection", style.DefaultStyleWarning)
+		sti.cmdHelp(input, args)
+		return
+	case CMDDump:
+		sti.cmdDump(input, args)
+		return
+	case CMDFlush:
+		sti.cmdFlush(input, args)
 		return
 	case CMDExit:
 		if sti.connected {
@@ -74,24 +63,35 @@ func (sti *STI) commandSwitch(input string) {
 		return
 	}
 
+	if sti.isSetCommand(input, args) {
+		sti.cmdSet(input, args)
+		return
+	}
+
 	if !sti.connected {
 		sti.mainPanel.Push(ErrNotConnected.Error(), style.DefaultStyleWarning)
 		return
 	}
 
-	err := sti.cmdWrite(input, args)
-	if err != nil {
-		sti.mainPanel.Push("[error] "+err.Error(), style.DefaultStyleError)
-		return
-	}
+	sti.cmdWrite(input, args)
+}
+
+func (sti *STI) cmdClear(input string, args []string) {
+	sti.mainPanel.Clear()
+	sti.termScreen.CommandPalette.PromptLine.Clear()
 	sti.termScreen.CommandPalette.AddToHistory(input)
 }
 
-func (sti *STI) cmdInfo(raw string, args []string) error {
+func (sti *STI) cmdInfo(input string, args []string) {
+	sti.pushEcho(input)
+	sti.termScreen.CommandPalette.AddToHistory(input)
+
 	conf, err := json.Marshal(sti.config)
 	if err != nil {
-		return err
+		sti.pushError(err)
+		return
 	}
+
 	jin.IterateKeyValue(conf, func(b1, b2 []byte) (bool, error) {
 		key := string(b1)
 		value := string(b2)
@@ -99,10 +99,13 @@ func (sti *STI) cmdInfo(raw string, args []string) error {
 		sti.mainPanel.Push(line, style.DefaultStyleInfo)
 		return true, nil
 	})
+
 	settings, err := json.Marshal(sti.setting)
 	if err != nil {
-		return err
+		sti.pushError(err)
+		return
 	}
+
 	jin.IterateKeyValue(settings, func(b1, b2 []byte) (bool, error) {
 		key := string(b1)
 		value := string(b2)
@@ -110,24 +113,72 @@ func (sti *STI) cmdInfo(raw string, args []string) error {
 		sti.mainPanel.Push(line, style.DefaultStyleInfo)
 		return true, nil
 	})
-	return nil
 }
 
-func (sti *STI) cmdSet(raw string, args []string) error {
-	if len(args) < 3 {
-		return fmt.Errorf("argument count is not valid for command '%s'", args[0])
+func (sti *STI) cmdHelp(input string, args []string) {
+	sti.mainPanel.Push("help (use commands with ':' prefix)", style.DefaultStyleWarning)
+	sti.mainPanel.Push("=>  :clear       clear the screen", style.DefaultStyleWarning)
+	sti.mainPanel.Push("=>  :exit        exit the program. you can also use 'Esc' key", style.DefaultStyleWarning)
+	sti.mainPanel.Push("=>  :info        get serial config info", style.DefaultStyleWarning)
+	sti.mainPanel.Push("=>  :<field>     set a value to a config field  example: ':baud 19200' or ':verbose true'", style.DefaultStyleWarning)
+	sti.mainPanel.Push("all other inputs will directly sent to serial connection", style.DefaultStyleWarning)
+}
+
+func (sti *STI) cmdFlush(input string, args []string) {
+	sti.pushEcho(input)
+	sti.termScreen.CommandPalette.AddToHistory(input)
+
+	sti.mainPanel.Flush()
+}
+
+func (sti *STI) cmdDump(input string, args []string) {
+	sti.pushEcho(input)
+	sti.termScreen.CommandPalette.AddToHistory(input)
+
+	if len(args) < 2 {
+		err := fmt.Errorf("argument count is not valid for command '%s'", args[0])
+		sti.pushError(err)
+		return
 	}
 
-	key := args[1]
-	value := args[2]
+	path := args[1]
+
+	n, err := sti.mainPanel.Dump(path)
+	if err != nil {
+		sti.pushError(err)
+		return
+	}
+
+	msg := fmt.Sprintf("file dump success. path: %s, size: %d bytes", path, n)
+	sti.mainPanel.Push(msg, style.DefaultStyleSuccess)
+
+}
+
+func (sti *STI) cmdSet(input string, args []string) {
+	sti.pushEcho(input)
+	sti.termScreen.CommandPalette.AddToHistory(input)
+
+	key := strings.TrimPrefix(args[0], ":")
+	value := args[1]
 
 	if utils.Contains(EditableConfigKeys, key) {
-		return sti.editConfig(key, value)
+		err := sti.editConfig(key, value)
+		if err != nil {
+			sti.mainPanel.Push(err.Error(), style.DefaultStyleError)
+			return
+		}
+		return
 	} else if utils.Contains(EditableSettingKeys, key) {
-		return sti.editSetting(key, value)
+		err := sti.editSetting(key, value)
+		if err != nil {
+			sti.mainPanel.Push(err.Error(), style.DefaultStyleError)
+			return
+		}
+		return
 	}
 
-	return fmt.Errorf("'%s' is not a stitable field. (read only or not exists)", key)
+	err := fmt.Errorf("'%s' is not a settable field. (read only or not exists)", key)
+	sti.mainPanel.Push(err.Error(), style.DefaultStyleError)
 }
 
 func (sti *STI) editConfig(key, value string) error {
@@ -168,14 +219,15 @@ func (sti *STI) editConfig(key, value string) error {
 	sti.mainPanel.Push(fmt.Sprintf("=> %s: %s", key, value), style.DefaultStyleInfo)
 
 	if !currentConnectionState {
-		sti.mainPanel.Push("connection success", &style.Style{ForegroundColor: 46})
+		sti.mainPanel.Push("connection success", style.DefaultStyleSuccess)
 	}
 
 	return nil
 }
+
 func (sti *STI) editSetting(key, value string) error {
 	if key == "mode" {
-		if value != SystemModeByte && value != SystemModeText {
+		if value != OutputModeChar && value != OutputModeText {
 			return fmt.Errorf("mode '%s' is not exists. try using 'byte' and 'text' modes", value)
 		}
 	}
@@ -200,37 +252,36 @@ func (sti *STI) editSetting(key, value string) error {
 	return nil
 }
 
-func (sti *STI) cmdWrite(raw string, args []string) error {
+func (sti *STI) cmdWrite(input string, args []string) error {
+	sti.termScreen.CommandPalette.AddToHistory(input)
+
 	switch sti.setting.Mode {
-	case SystemModeText:
-		return sti.cmdWriteText(raw, args)
-	case SystemModeByte:
-		return sti.cmdWriteByte(raw, args)
+	case OutputModeText:
+		return sti.cmdWriteText(input, args)
+	case OutputModeChar:
+		return sti.cmdWriteByte(input, args)
 	}
 	return nil
 }
 
-func (sti *STI) cmdWriteText(raw string, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("[error] argument count is not valid for command '%s'", args[0])
-	}
+func (sti *STI) cmdWriteText(input string, args []string) error {
 
-	n, err := sti.stream.Write([]byte(raw))
+	n, err := sti.stream.Write([]byte(input))
 	if err != nil {
 		return err
 	}
 
-	rawBytes := []byte(raw[:n])
+	inputBytes := []byte(input[:n])
 
-	rawBytes = utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL, rawBytes)
+	inputBytes = utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL, inputBytes)
 
-	pushFormat(sti, "<<", 81, rawBytes)
+	pushFormat(sti, "<<", 81, inputBytes)
 	return nil
 }
 
-func (sti *STI) cmdWriteByte(raw string, args []string) error {
-	numbers := strings.Split(raw, " ")
-	arr := make([]byte, 0, len(raw))
+func (sti *STI) cmdWriteByte(input string, args []string) error {
+	numbers := strings.Split(input, " ")
+	arr := make([]byte, 0, len(input))
 	for _, n := range numbers {
 		b, err := utils.StringToByte(n)
 		if err != nil {
@@ -250,17 +301,22 @@ func (sti *STI) cmdWriteByte(raw string, args []string) error {
 	return nil
 }
 
-func pushFormat(sti *STI, direction string, color int, raw []byte) {
-	if sti.setting.Verbose {
-		pushVerboseFormat(sti, direction, color, raw)
+func pushFormat(sti *STI, direction string, color int, input []byte) {
+	if sti.setting.Mode == OutputModeChar {
+		pushVerboseFormat(sti, direction, color, input)
 		return
 	}
-	sti.mainPanel.Push("> "+string(raw), &style.Style{ForegroundColor: color})
+	if sti.setting.Verbose {
+		pushVerboseFormat(sti, direction, color, input)
+		return
+	}
+	msg := fmt.Sprintf("%s %s", direction, string(input))
+	sti.mainPanel.Push(msg, &style.Style{ForegroundColor: color})
 }
 
-func pushVerboseFormat(sti *STI, direction string, color int, raw []byte) {
-	for i := 0; i < len(raw); i++ {
-		r := raw[i]
+func pushVerboseFormat(sti *STI, direction string, color int, input []byte) {
+	for i := 0; i < len(input); i++ {
+		r := input[i]
 		var s string
 		if unicode.IsPrint(rune(r)) {
 			s = fmt.Sprintf(VerboseDataFormat, direction, r, r, r, r)
@@ -269,4 +325,24 @@ func pushVerboseFormat(sti *STI, direction string, color int, raw []byte) {
 		}
 		sti.mainPanel.Push(s, &style.Style{ForegroundColor: color})
 	}
+}
+
+func (sti *STI) isSetCommand(input string, args []string) bool {
+	if len(args) != 2 {
+		return false
+	}
+
+	if !strings.HasPrefix(args[0], ":") {
+		return false
+	}
+
+	return true
+}
+
+func (sti *STI) pushError(err error) {
+	sti.mainPanel.Push("[error] "+err.Error(), style.DefaultStyleError)
+}
+
+func (sti *STI) pushEcho(text string) {
+	sti.mainPanel.Push(text, StyleNeutral)
 }
