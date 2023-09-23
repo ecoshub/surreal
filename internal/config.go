@@ -12,24 +12,26 @@ var (
 	}
 	EditableSettingKeys = []string{
 		"eol",
-		"eol-enable",
+		"eol-char",
 		"mode",
+		"stop",
 	}
 )
 
 const (
-	OutputModeText string = "text"
-	OutputModeChar string = "char"
+	OutputModeString string = "string"
+	OutputModeByte   string = "byte"
 
 	DefaultEOL       uint32 = 0x0a
 	DefaultEOLEnable bool   = false
-	DefaultMode      string = OutputModeText
+	DefaultMode      string = OutputModeString
 )
 
 type Settings struct {
-	EOL       uint32 `json:"eol"`
-	EOLEnable bool   `json:"eol-enable"`
-	Mode      string `json:"mode"`
+	EOL       *model.EOLChar `json:"eol-char"`
+	EOLEnable bool           `json:"eol"`
+	Mode      string         `json:"mode"`
+	StopPrint bool           `json:"stop"`
 }
 
 type Config struct {

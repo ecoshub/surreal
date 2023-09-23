@@ -15,32 +15,31 @@ func Contains(arr []string, element string) bool {
 	return false
 }
 
-func StringToByte(raw string) (byte, error) {
+func StringToByte(raw string) (byte, bool) {
 	if strings.HasPrefix(raw, "0x") {
 		raw = strings.TrimPrefix(raw, "0x")
 		val, err := strconv.ParseUint(raw, 16, 8)
 		if err != nil {
-			return 0, err
+			return 0, false
 		}
-		return byte(val), nil
+		return byte(val), true
 	}
 	if strings.HasPrefix(raw, "0b") {
 		raw = strings.TrimPrefix(raw, "0b")
 		val, err := strconv.ParseUint(raw, 2, 8)
 		if err != nil {
-			return 0, err
+			return 0, false
 		}
-		return byte(val), nil
+		return byte(val), true
 	}
 	val, err := strconv.ParseUint(raw, 10, 8)
 	if err != nil {
-
 		if len(raw) == 1 {
-			return raw[0], nil
+			return raw[0], false
 		}
-		return 0, err
+		return 0, false
 	}
-	return byte(val), nil
+	return byte(val), true
 }
 
 func IntToByteArray(num int64) []byte {
@@ -60,7 +59,9 @@ func FormatUsingEOL(eolEnable bool, eol uint32, raw []byte) []byte {
 		}
 		eolArr := make([]byte, 0, 8)
 		arr := IntToByteArray(int64(eol))
-		for _, c := range arr {
+		for i := 0; i < len(arr); i++ {
+			index := len(arr) - i - 1
+			c := arr[index]
 			if c == 0 {
 				continue
 			}

@@ -18,7 +18,6 @@ var (
 
 func (sti *STI) reader() {
 	readBuffer := make([]byte, 64)
-	// done := false
 	raw := make([]byte, 0, 32)
 	for {
 		select {
@@ -46,7 +45,7 @@ func (sti *STI) reader() {
 }
 
 func receivePushFormat(sti *STI, buffer []byte) {
-	if sti.setting.Mode == OutputModeChar {
+	if sti.setting.Mode == OutputModeByte {
 		for _, r := range buffer {
 			var s string
 			if unicode.IsPrint(rune(r)) {

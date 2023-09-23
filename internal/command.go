@@ -22,15 +22,9 @@ const (
 	CMDClear string = ":clear"
 	CMDInfo  string = ":info"
 	CMDHelp  string = ":help"
-	CMDDump  string = ":dump"
-	CMDFlush string = ":flush"
 
 	DataFormat        string = "[%s] %c 0x%02x 0b%08b %d"
 	DataFormatNoPrint string = "[%s] . 0x%02x 0b%08b %d"
-)
-
-var (
-	StyleNeutral = &style.Style{ForegroundColor: 59}
 )
 
 func (sti *STI) commandSwitch(input string) {
@@ -64,6 +58,11 @@ func (sti *STI) commandSwitch(input string) {
 	if !sti.connected {
 		sti.Print(style.SetStyle(ErrNotConnected.Error(), style.DefaultStyleWarning))
 		return
+	}
+
+	// escape column char
+	if strings.HasPrefix(input, "::") {
+		input = strings.TrimPrefix(input, ":")
 	}
 
 	sti.cmdWrite(input, args)
@@ -109,10 +108,11 @@ func (sti *STI) cmdInfo(input string, args []string) {
 
 func (sti *STI) cmdHelp(input string, args []string) {
 	sti.Print(style.SetStyle("help", style.DefaultStyleInfo))
-	sti.Print(style.SetStyle("=>  :clear       clear the screen", style.DefaultStyleInfo))
-	sti.Print(style.SetStyle("=>  :exit        exit the program. you can also use 'Esc' key", style.DefaultStyleInfo))
-	sti.Print(style.SetStyle("=>  :info        get serial config info", style.DefaultStyleInfo))
-	sti.Print(style.SetStyle("=>  :<field>     set a value to a config field  example: ':baud 19200'", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :help               show this help dialog", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :clear              clear the screen", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :exit               exit the program. you can also use 'Esc' key", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :info               get serial config info", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :<field> <value>    set a config <field> to a <value>. example: ':baud 9600'", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("all other inputs will directly sent to serial connection", style.DefaultStyleInfo))
 }
 
@@ -191,8 +191,8 @@ func (sti *STI) editConfig(key, value string) error {
 
 func (sti *STI) editSetting(key, value string) error {
 	if key == "mode" {
-		if value != OutputModeChar && value != OutputModeText {
-			return fmt.Errorf("mode '%s' is not exists. try using 'byte' and 'text' modes", value)
+		if value != OutputModeByte && value != OutputModeString {
+			return fmt.Errorf("mode '%s' is not exists. try using 'byte' and 'string' modes", value)
 		}
 	}
 
@@ -221,9 +221,9 @@ func (sti *STI) cmdWrite(input string, args []string) error {
 	sti.termScreen.CommandPalette.AddToHistory(input)
 
 	switch sti.setting.Mode {
-	case OutputModeText:
+	case OutputModeString:
 		return sti.cmdWriteText(input, args)
-	case OutputModeChar:
+	case OutputModeByte:
 		return sti.cmdWriteByte(input, args)
 	}
 	return nil
@@ -231,7 +231,7 @@ func (sti *STI) cmdWrite(input string, args []string) error {
 
 func (sti *STI) cmdWriteText(input string, args []string) error {
 
-	inputBytes := utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL, []byte(input))
+	inputBytes := utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL.Char, []byte(input))
 
 	sti.Print(style.SetStyle("<< "+string(inputBytes), style.DefaultStyleEvent))
 
@@ -244,23 +244,7 @@ func (sti *STI) cmdWriteText(input string, args []string) error {
 }
 
 func (sti *STI) cmdWriteByte(input string, args []string) error {
-	numbers := strings.Split(input, " ")
-	arr := make([]byte, 0, len(input))
-	for i, n := range numbers {
-		b, err := utils.StringToByte(n)
-		if err != nil {
-			for _, r := range n {
-				b, _ = utils.StringToByte(string(r))
-				arr = append(arr, b)
-			}
-			if i != len(numbers)-1 {
-				arr = append(arr, ' ')
-			}
-			continue
-		} else {
-			arr = append(arr, b)
-		}
-	}
+	arr := byteFormat(sti, input)
 
 	for _, r := range arr {
 		var s string
@@ -300,5 +284,5 @@ func (sti *STI) pushError(err error) {
 }
 
 func (sti *STI) pushEcho(text string) {
-	sti.Print(style.SetStyle(text, StyleNeutral))
+	sti.Print(text)
 }

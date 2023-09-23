@@ -20,7 +20,6 @@ type STI struct {
 	termScreen *screen.Screen
 	stop       chan struct{}
 	connected  bool
-	stopPrint  bool
 }
 
 const (
@@ -65,7 +64,7 @@ func New(c *Config) (*STI, error) {
 	s := &STI{
 		config: c,
 		setting: &Settings{
-			EOL:       DefaultEOL,
+			EOL:       &model.EOLChar{Char: DefaultEOL},
 			EOLEnable: DefaultEOLEnable,
 			Mode:      DefaultMode,
 		},
@@ -117,16 +116,13 @@ func (sti *STI) StartSerial() {
 }
 
 func (sti *STI) StartTerminal() {
-	go func() {
-		// wait till terminal screen initialize
-		time.Sleep(time.Millisecond * 250)
-		if !sti.connected {
-			sti.Print(style.SetStyle(ErrNotConnected.Error(), style.DefaultStyleWarning))
-		} else {
-			sti.Print(style.SetStyle("connection success", style.DefaultStyleSuccess))
-			sti.cmdInfo(CMDInfo, []string{})
-		}
-	}()
+	sti.cmdHelp(CMDHelp, []string{})
+	if !sti.connected {
+		sti.Print(style.SetStyle(ErrNotConnected.Error(), style.DefaultStyleWarning))
+	} else {
+		sti.Print(style.SetStyle("connection success", style.DefaultStyleSuccess))
+		sti.cmdInfo(CMDInfo, []string{})
+	}
 	sti.termScreen.Start()
 }
 
@@ -139,7 +135,7 @@ func (sti *STI) StopSerial() {
 }
 
 func (sti *STI) Print(input string) {
-	if sti.stopPrint {
+	if sti.setting.StopPrint {
 		return
 	}
 	sti.termScreen.Print(input)
