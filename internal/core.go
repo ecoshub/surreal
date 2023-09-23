@@ -8,10 +8,8 @@ import (
 	"time"
 
 	"github.com/ecoshub/termium/component/palette"
-	"github.com/ecoshub/termium/component/panel"
 	"github.com/ecoshub/termium/component/screen"
 	"github.com/ecoshub/termium/component/style"
-	"github.com/ecoshub/termium/utils"
 	"github.com/tarm/serial"
 )
 
@@ -20,9 +18,9 @@ type STI struct {
 	setting    *Settings
 	stream     *serial.Port
 	termScreen *screen.Screen
-	mainPanel  *panel.Stack
 	stop       chan struct{}
 	connected  bool
+	stopPrint  bool
 }
 
 const (
@@ -37,19 +35,16 @@ func ParseConfigFlags() *Config {
 	c := &Config{}
 
 	var parity int
-	var timeout time.Duration
 	var stopBits int
 
 	flag.StringVar(&c.Path, "path", "", "device path")
 	flag.IntVar(&c.Baud, "baud", DefaultBaud, "baud rate. default 115200. 115200|57600|38400|19200|9600|4800|2400|1200|600|300|200|150|134|110|75|50")
 	flag.IntVar(&c.Size, "size", DefaultBitSize, "data bit size. default 8")
 	flag.IntVar(&parity, "parity", DefaultParity, "parity. N|O|E|M|S")
-	flag.DurationVar(&timeout, "timeout", time.Second, "read timeout. default 1 second")
 	flag.IntVar(&stopBits, "stop-bit", DefaultStopBits, "stop bit. 1|15|2. default 1")
 
 	flag.Parse()
 
-	c.Timeout = &model.Duration{Duration: timeout}
 	c.Parity = &model.Parity{Parity: serial.Parity(parity), DefaultParity: serial.Parity(DefaultParity)}
 	c.StopBits = &model.StopBits{StopBits: serial.StopBits(stopBits), DefaultStopBits: serial.StopBits(DefaultStopBits)}
 	return c
@@ -67,23 +62,14 @@ func New(c *Config) (*STI, error) {
 		return nil, err
 	}
 
-	mainPanel := panel.NewStackPanel(&panel.Config{
-		Width:  utils.TerminalWith,
-		Height: utils.TerminalHeight - 2,
-	})
-
-	sc.Add(mainPanel, 0, 0)
-
 	s := &STI{
 		config: c,
 		setting: &Settings{
-			Verbose:   DefaultVerbosity,
 			EOL:       DefaultEOL,
 			EOLEnable: DefaultEOLEnable,
 			Mode:      DefaultMode,
 		},
 		termScreen: sc,
-		mainPanel:  mainPanel,
 		stop:       make(chan struct{}, 1),
 	}
 
@@ -110,15 +96,8 @@ func (sti *STI) Connect(conf *Config) error {
 		Size:        byte(conf.Size),
 		Parity:      conf.Parity.Parity,
 		StopBits:    conf.StopBits.StopBits,
-		ReadTimeout: conf.Timeout.Duration,
+		ReadTimeout: time.Millisecond,
 	}
-
-	// calculate timeout from baud rate and add an extra microsecond
-	t := (1.0 / float64(conf.Baud)) * 1e9 * 8
-	to := time.Duration(t) * time.Nanosecond
-	to += time.Microsecond
-
-	config.ReadTimeout = to
 
 	var err error
 	sti.stream, err = serial.OpenPort(config)
@@ -142,9 +121,9 @@ func (sti *STI) StartTerminal() {
 		// wait till terminal screen initialize
 		time.Sleep(time.Millisecond * 250)
 		if !sti.connected {
-			sti.mainPanel.Push(ErrNotConnected.Error(), style.DefaultStyleWarning)
+			sti.Print(style.SetStyle(ErrNotConnected.Error(), style.DefaultStyleWarning))
 		} else {
-			sti.mainPanel.Push("connection success", style.DefaultStyleSuccess)
+			sti.Print(style.SetStyle("connection success", style.DefaultStyleSuccess))
 			sti.cmdInfo(CMDInfo, []string{})
 		}
 	}()
@@ -157,4 +136,11 @@ func (sti *STI) StopSerial() {
 	}
 	sti.stream.Close()
 	sti.stop <- struct{}{}
+}
+
+func (sti *STI) Print(input string) {
+	if sti.stopPrint {
+		return
+	}
+	sti.termScreen.Print(input)
 }

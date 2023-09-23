@@ -1,16 +1,24 @@
 package sti
 
 import (
-	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"unicode"
 
 	"github.com/ecoshub/termium/component/style"
 )
 
+var (
+	ReceiveStyle = &style.Style{
+		ForegroundColor: 41,
+	}
+)
+
 func (sti *STI) reader() {
 	readBuffer := make([]byte, 64)
+	// done := false
 	raw := make([]byte, 0, 32)
 	for {
 		select {
@@ -20,24 +28,35 @@ func (sti *STI) reader() {
 			n, err := sti.stream.Read(readBuffer)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					if len(raw) == 0 {
+					if len(raw) > 0 {
+						receivePushFormat(sti, raw)
+						raw = make([]byte, 0, 32)
 						continue
 					}
-					pushFormat(sti, ">>", 46, raw)
-					raw = make([]byte, 0, 32)
 					continue
 				}
-				sti.mainPanel.Push(err.Error(), style.DefaultStyleError)
+				sti.pushError(err)
 				os.Exit(0)
 				return
 			}
 			s := readBuffer[:n]
 			raw = append(raw, s...)
-			if bytes.HasSuffix(s, []byte{'\n'}) || bytes.HasSuffix(s, []byte{'\n', '\r'}) {
-				pushFormat(sti, ">>", 46, raw)
-				raw = make([]byte, 0, 32)
-				continue
-			}
 		}
 	}
+}
+
+func receivePushFormat(sti *STI, buffer []byte) {
+	if sti.setting.Mode == OutputModeChar {
+		for _, r := range buffer {
+			var s string
+			if unicode.IsPrint(rune(r)) {
+				s = fmt.Sprintf(DataFormat, ">>", r, r, r, r)
+			} else {
+				s = fmt.Sprintf(DataFormatNoPrint, ">>", r, r, r)
+			}
+			sti.Print(style.SetStyle(s, ReceiveStyle))
+		}
+		return
+	}
+	sti.Print(style.SetStyle(">> "+string(buffer), ReceiveStyle))
 }
