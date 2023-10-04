@@ -46,7 +46,7 @@ func (sti *STI) reader() {
 }
 
 func receivePushFormat(sti *STI, buffer []byte) {
-	if sti.setting.Mode == OutputModeByte {
+	if sti.settings.Mode == OutputModeByte {
 		for _, r := range buffer {
 			var s string
 			if unicode.IsPrint(rune(r)) {

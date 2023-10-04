@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ErrNotConnected error = errors.New("system is not connected. add a device path to start. usage: ':set path <device_path>'")
+	ErrNotConnected error = errors.New("serial device not connected. To connect a device add its path. example: ':path /dev/tty.usbserial-110'")
 )
 
 const (
@@ -91,7 +91,7 @@ func (sti *STI) cmdInfo(input string, args []string) {
 		return true, nil
 	})
 
-	settings, err := json.Marshal(sti.setting)
+	settings, err := json.Marshal(sti.settings)
 	if err != nil {
 		sti.pushError(err)
 		return
@@ -113,6 +113,7 @@ func (sti *STI) cmdHelp(input string, args []string) {
 	sti.Print(style.SetStyle("  :exit               exit the program. you can also use 'Esc' key", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("  :info               get serial config info", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("  :<field> <value>    set a config <field> to a <value>. example: ':baud 9600'", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :<field>            toggle boolean settings (mode, eol, stop).  example: ':mode' (toggles between 'string' and 'byte' mode)", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("all other inputs will directly sent to serial connection", style.DefaultStyleInfo))
 }
 
@@ -121,7 +122,11 @@ func (sti *STI) cmdSet(input string, args []string) {
 	sti.termScreen.CommandPalette.AddToHistory(input)
 
 	key := strings.TrimPrefix(args[0], ":")
-	value := args[1]
+
+	var value string
+	if len(args) > 1 {
+		value = args[1]
+	}
 
 	if utils.Contains(EditableConfigKeys, key) {
 		err := sti.editConfig(key, value)
@@ -190,13 +195,12 @@ func (sti *STI) editConfig(key, value string) error {
 }
 
 func (sti *STI) editSetting(key, value string) error {
-	if key == "mode" {
-		if value != OutputModeByte && value != OutputModeString {
-			return fmt.Errorf("mode '%s' is not exists. try using 'byte' and 'string' modes", value)
-		}
+	key, value, err := sti.validateAndModifySetCommand(key, value)
+	if err != nil {
+		return err
 	}
 
-	conf, err := json.Marshal(sti.setting)
+	conf, err := json.Marshal(sti.settings)
 	if err != nil {
 		return err
 	}
@@ -206,7 +210,7 @@ func (sti *STI) editSetting(key, value string) error {
 		return err
 	}
 
-	err = json.Unmarshal(newConfig, &sti.setting)
+	err = json.Unmarshal(newConfig, &sti.settings)
 	if err != nil {
 		return err
 	}
@@ -220,7 +224,7 @@ func (sti *STI) editSetting(key, value string) error {
 func (sti *STI) cmdWrite(input string, args []string) error {
 	sti.termScreen.CommandPalette.AddToHistory(input)
 
-	switch sti.setting.Mode {
+	switch sti.settings.Mode {
 	case OutputModeString:
 		return sti.cmdWriteText(input, args)
 	case OutputModeByte:
@@ -233,7 +237,7 @@ func (sti *STI) cmdWriteText(input string, args []string) error {
 
 	sti.Print(style.SetStyle("<< "+input, style.DefaultStyleEvent))
 
-	inputBytes := utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL.Char, []byte(input))
+	inputBytes := utils.FormatUsingEOL(sti.settings.EOLEnable, sti.settings.EOL.Char, []byte(input))
 
 	_, err := sti.stream.Write(inputBytes)
 	if err != nil {
@@ -268,15 +272,44 @@ func (sti *STI) cmdWriteByte(input string, args []string) error {
 }
 
 func (sti *STI) isSetCommand(input string, args []string) bool {
-	if len(args) != 2 {
-		return false
-	}
-
 	if !strings.HasPrefix(args[0], ":") {
 		return false
 	}
 
 	return true
+}
+
+func (sti *STI) validateAndModifySetCommand(key, value string) (string, string, error) {
+	switch key {
+	case "mode":
+		switch value {
+		case "":
+			if sti.settings.Mode == OutputModeByte {
+				return key, OutputModeString, nil
+			}
+			if sti.settings.Mode == OutputModeString {
+				return key, OutputModeByte, nil
+			}
+		case "s":
+			return key, OutputModeString, nil
+		case "b":
+			return key, OutputModeByte, nil
+		case OutputModeByte, OutputModeString:
+			return key, value, nil
+		}
+	case "eol":
+		if value == "" {
+			value = fmt.Sprint(!sti.settings.EOLEnable)
+		}
+	case "stop":
+		if value == "" {
+			value = fmt.Sprint(!sti.settings.StopPrint)
+		}
+	}
+	if value == "" {
+		return "", "", errors.New("value can not be empty")
+	}
+	return key, value, nil
 }
 
 func (sti *STI) pushError(err error) {

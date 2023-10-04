@@ -15,7 +15,7 @@ import (
 
 type STI struct {
 	config     *Config
-	setting    *Settings
+	settings   *Settings
 	stream     *serial.Port
 	termScreen *screen.Screen
 	stop       chan struct{}
@@ -63,7 +63,7 @@ func New(c *Config) (*STI, error) {
 
 	s := &STI{
 		config: c,
-		setting: &Settings{
+		settings: &Settings{
 			EOL:       &model.EOLChar{Char: DefaultEOL},
 			EOLEnable: DefaultEOLEnable,
 			Mode:      DefaultMode,
@@ -135,7 +135,7 @@ func (sti *STI) StopSerial() {
 }
 
 func (sti *STI) Print(input string) {
-	if sti.setting.StopPrint {
+	if sti.settings.StopPrint {
 		return
 	}
 	sti.termScreen.Print(input)

@@ -6,18 +6,17 @@ import (
 )
 
 func byteFormat(sti *STI, input string) []byte {
-	if !isStringInput(input) {
-		inputBytes := utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL.Char, []byte(input))
-		return []byte(inputBytes)
+	if isStringInput(input) {
+		arr := make([]byte, 0, len(input))
+		for _, r := range input {
+			b, _ := utils.StringToByte(string(r))
+			arr = append(arr, b)
+		}
+		return arr
 	}
 
-	words := strings.Split(input, " ")
-	arr := make([]byte, 0, len(input))
-	for _, r := range words {
-		b, _ := utils.StringToByte(string(r))
-		arr = append(arr, b)
-	}
-	return arr
+	inputBytes := utils.FormatUsingEOL(sti.settings.EOLEnable, sti.settings.EOL.Char, []byte(input))
+	return []byte(inputBytes)
 }
 
 func isStringInput(input string) bool {
