@@ -1,6 +1,7 @@
 package sti
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -57,5 +58,7 @@ func receivePushFormat(sti *STI, buffer []byte) {
 		}
 		return
 	}
+
+	buffer = bytes.TrimSuffix(buffer, []byte{'\n'})
 	sti.Print(style.SetStyle(">> "+string(buffer), ReceiveStyle))
 }

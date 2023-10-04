@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	sti "sti/internal"
 )
 
@@ -10,8 +9,7 @@ func main() {
 
 	ph, err := sti.New(c)
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
 	ph.StartTerminal()

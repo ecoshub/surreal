@@ -231,9 +231,9 @@ func (sti *STI) cmdWrite(input string, args []string) error {
 
 func (sti *STI) cmdWriteText(input string, args []string) error {
 
-	inputBytes := utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL.Char, []byte(input))
+	sti.Print(style.SetStyle("<< "+input, style.DefaultStyleEvent))
 
-	sti.Print(style.SetStyle("<< "+string(inputBytes), style.DefaultStyleEvent))
+	inputBytes := utils.FormatUsingEOL(sti.setting.EOLEnable, sti.setting.EOL.Char, []byte(input))
 
 	_, err := sti.stream.Write(inputBytes)
 	if err != nil {
