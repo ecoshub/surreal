@@ -1,12 +1,14 @@
-package sti
+package core
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"sti/utils"
 	"strings"
+	"surreal/src/config"
+	"surreal/src/settings"
+	"surreal/utils"
 	"unicode"
 
 	"github.com/ecoshub/jin"
@@ -14,7 +16,7 @@ import (
 )
 
 var (
-	ErrNotConnected error = errors.New("serial device not connected. To connect a device add its path. example: ':path /dev/tty.usbserial-110'")
+	ErrNotConnected error = errors.New("serial device not connected. To connect a device please provide its path. example: ':path /dev/tty.usbserial-110'")
 )
 
 const (
@@ -25,6 +27,9 @@ const (
 
 	DataFormat        string = "[%s] %c 0x%02x 0b%08b %d"
 	DataFormatNoPrint string = "[%s] . 0x%02x 0b%08b %d"
+
+	ReceivedDataPrefix = "<<"
+	SentDataPrefix     = ">>"
 )
 
 func (sti *STI) commandSwitch(input string) {
@@ -113,7 +118,7 @@ func (sti *STI) cmdHelp(input string, args []string) {
 	sti.Print(style.SetStyle("  :exit               exit the program. you can also use 'Esc' key", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("  :info               get serial config info", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("  :<field> <value>    set a config <field> to a <value>. example: ':baud 9600'", style.DefaultStyleInfo))
-	sti.Print(style.SetStyle("  :<field>            toggle boolean settings (mode, eol, stop).  example: ':mode' (toggles between 'string' and 'byte' mode)", style.DefaultStyleInfo))
+	sti.Print(style.SetStyle("  :<field>            toggle boolean settings (mode, eol, stop).  example: ':mode' (toggles between 'text' and 'byte' mode)", style.DefaultStyleInfo))
 	sti.Print(style.SetStyle("all other inputs will directly sent to serial connection", style.DefaultStyleInfo))
 }
 
@@ -128,14 +133,14 @@ func (sti *STI) cmdSet(input string, args []string) {
 		value = args[1]
 	}
 
-	if utils.Contains(EditableConfigKeys, key) {
+	if utils.Contains(config.EditableConfigKeys, key) {
 		err := sti.editConfig(key, value)
 		if err != nil {
 			sti.pushError(err)
 			return
 		}
 		return
-	} else if utils.Contains(EditableSettingKeys, key) {
+	} else if utils.Contains(settings.EditableSettingKeys, key) {
 		err := sti.editSetting(key, value)
 		if err != nil {
 			sti.pushError(err)
@@ -159,7 +164,7 @@ func (sti *STI) editConfig(key, value string) error {
 		return err
 	}
 
-	temp := &Config{}
+	temp := &config.Config{}
 	err = json.Unmarshal(newConfig, &temp)
 	if err != nil {
 		return err
@@ -225,9 +230,9 @@ func (sti *STI) cmdWrite(input string, args []string) error {
 	sti.termScreen.CommandPalette.AddToHistory(input)
 
 	switch sti.settings.Mode {
-	case OutputModeString:
+	case config.OutputModeText:
 		return sti.cmdWriteText(input, args)
-	case OutputModeByte:
+	case config.OutputModeByte:
 		return sti.cmdWriteByte(input, args)
 	}
 	return nil
@@ -235,7 +240,7 @@ func (sti *STI) cmdWrite(input string, args []string) error {
 
 func (sti *STI) cmdWriteText(input string, args []string) error {
 
-	sti.Print(style.SetStyle("<< "+input, style.DefaultStyleEvent))
+	sti.Print(style.SetStyle(ReceivedDataPrefix+" "+input, style.DefaultStyleEvent))
 
 	inputBytes := utils.FormatUsingEOL(sti.settings.EOLEnable, sti.settings.EOL.Char, []byte(input))
 
@@ -253,9 +258,9 @@ func (sti *STI) cmdWriteByte(input string, args []string) error {
 	for _, r := range arr {
 		var s string
 		if unicode.IsPrint(rune(r)) {
-			s = fmt.Sprintf(DataFormat, "<<", r, r, r, r)
+			s = fmt.Sprintf(DataFormat, ReceivedDataPrefix, r, r, r, r)
 		} else {
-			s = fmt.Sprintf(DataFormatNoPrint, "<<", r, r, r)
+			s = fmt.Sprintf(DataFormatNoPrint, ReceivedDataPrefix, r, r, r)
 		}
 		sti.Print(style.SetStyle(s, style.DefaultStyleEvent))
 	}
@@ -284,17 +289,17 @@ func (sti *STI) validateAndModifySetCommand(key, value string) (string, string, 
 	case "mode":
 		switch value {
 		case "":
-			if sti.settings.Mode == OutputModeByte {
-				return key, OutputModeString, nil
+			if sti.settings.Mode == config.OutputModeByte {
+				return key, config.OutputModeText, nil
 			}
-			if sti.settings.Mode == OutputModeString {
-				return key, OutputModeByte, nil
+			if sti.settings.Mode == config.OutputModeText {
+				return key, config.OutputModeByte, nil
 			}
 		case "s":
-			return key, OutputModeString, nil
+			return key, config.OutputModeText, nil
 		case "b":
-			return key, OutputModeByte, nil
-		case OutputModeByte, OutputModeString:
+			return key, config.OutputModeByte, nil
+		case config.OutputModeByte, config.OutputModeText:
 			return key, value, nil
 		}
 	case "eol":

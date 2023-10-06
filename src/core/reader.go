@@ -1,4 +1,4 @@
-package sti
+package core
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"surreal/src/config"
 	"unicode"
 
 	"github.com/ecoshub/termium/component/style"
@@ -46,13 +47,13 @@ func (sti *STI) reader() {
 }
 
 func receivePushFormat(sti *STI, buffer []byte) {
-	if sti.settings.Mode == OutputModeByte {
+	if sti.settings.Mode == config.OutputModeByte {
 		for _, r := range buffer {
 			var s string
 			if unicode.IsPrint(rune(r)) {
-				s = fmt.Sprintf(DataFormat, ">>", r, r, r, r)
+				s = fmt.Sprintf(DataFormat, SentDataPrefix, r, r, r, r)
 			} else {
-				s = fmt.Sprintf(DataFormatNoPrint, ">>", r, r, r)
+				s = fmt.Sprintf(DataFormatNoPrint, SentDataPrefix, r, r, r)
 			}
 			sti.Print(style.SetStyle(s, ReceiveStyle))
 		}
@@ -60,5 +61,5 @@ func receivePushFormat(sti *STI, buffer []byte) {
 	}
 
 	buffer = bytes.TrimSuffix(buffer, []byte{'\n'})
-	sti.Print(style.SetStyle(">> "+string(buffer), ReceiveStyle))
+	sti.Print(style.SetStyle(SentDataPrefix+" "+string(buffer), ReceiveStyle))
 }

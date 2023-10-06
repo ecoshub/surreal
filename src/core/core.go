@@ -1,10 +1,12 @@
-package sti
+package core
 
 import (
 	"flag"
 	"fmt"
 	"os"
-	"sti/model"
+	"surreal/src/config"
+	"surreal/src/model"
+	"surreal/src/settings"
 	"time"
 
 	"github.com/ecoshub/termium/component/palette"
@@ -14,8 +16,8 @@ import (
 )
 
 type STI struct {
-	config     *Config
-	settings   *Settings
+	config     *config.Config
+	settings   *settings.Settings
 	stream     *serial.Port
 	termScreen *screen.Screen
 	stop       chan struct{}
@@ -29,9 +31,9 @@ const (
 	DefaultStopBits int = 1
 )
 
-func ParseConfigFlags() *Config {
+func ParseConfigFlags() *config.Config {
 
-	c := &Config{}
+	c := &config.Config{}
 
 	var parity int
 	var stopBits int
@@ -49,7 +51,7 @@ func ParseConfigFlags() *Config {
 	return c
 }
 
-func New(c *Config) (*STI, error) {
+func New(c *config.Config) (*STI, error) {
 
 	sc, err := screen.New(&screen.Config{
 		CommandPaletteConfig: &palette.Config{
@@ -63,10 +65,10 @@ func New(c *Config) (*STI, error) {
 
 	s := &STI{
 		config: c,
-		settings: &Settings{
-			EOL:       &model.EOLChar{Char: DefaultEOL},
-			EOLEnable: DefaultEOLEnable,
-			Mode:      DefaultMode,
+		settings: &settings.Settings{
+			EOL:       &model.EOLChar{Char: config.DefaultEOL},
+			EOLEnable: config.DefaultEOLEnable,
+			Mode:      config.DefaultMode,
 		},
 		termScreen: sc,
 		stop:       make(chan struct{}, 1),
@@ -88,7 +90,7 @@ func New(c *Config) (*STI, error) {
 	return s, nil
 }
 
-func (sti *STI) Connect(conf *Config) error {
+func (sti *STI) Connect(conf *config.Config) error {
 	config := &serial.Config{
 		Name:        conf.Path,
 		Baud:        conf.Baud,

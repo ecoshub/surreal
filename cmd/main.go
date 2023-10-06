@@ -1,13 +1,13 @@
 package main
 
 import (
-	sti "sti/internal"
+	"surreal/src/core"
 )
 
 func main() {
-	c := sti.ParseConfigFlags()
+	c := core.ParseConfigFlags()
 
-	ph, err := sti.New(c)
+	ph, err := core.New(c)
 	if err != nil {
 		panic(err)
 	}

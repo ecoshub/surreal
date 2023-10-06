@@ -1,4 +1,4 @@
-module sti
+module surreal
 
 go 1.20
 

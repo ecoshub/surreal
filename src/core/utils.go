@@ -1,8 +1,8 @@
-package sti
+package core
 
 import (
-	"sti/utils"
 	"strings"
+	"surreal/utils"
 )
 
 func byteFormat(sti *STI, input string) []byte {
