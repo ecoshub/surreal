@@ -55,6 +55,8 @@ Run from source code (*golang 1.2 required*)
 
 ### Connecting
 
+![connecting](screenshot-connecting.png)
+
 When you start the program, it uses default configurations:
 
     path: ''
@@ -84,6 +86,8 @@ To provide a device path, use the **:path <device_path>** command as shown above
 You can change serial configurations like **baud** or **size** at any time, and it will change its configurations immediately.
 
 ### Communication
+
+![communication](screenshot-communication.png)
 
 **Text Mode**
 
