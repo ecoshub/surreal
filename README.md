@@ -130,3 +130,8 @@ You can also change the end-of-line character. For example, changing it to '\n\r
 
 You can stop printing with the **:stop** command, which toggles between *start* and *stop*.
 
+## Contributing
+Contributions to this project are welcome. If you have any suggestions, bug reports, or feature requests, please open an issue or submit a pull request.
+
+## License
+This program is licensed under the MIT License.
