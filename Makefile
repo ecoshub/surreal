@@ -1,5 +1,6 @@
 .PHONY: release
 release:
+	go mod tidy
 	mkdir -p release
 	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ./release/windows-amd64/surreal-windows-amd64 ./cmd/main.go
 	CGO_ENABLED=1 GOOS=windows GOARCH=386 go build -ldflags "-s -w" -o ./release/windows-386/surreal-windows-386 ./cmd/main.go
@@ -9,6 +10,7 @@ release:
 	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ./release/macos-arm/surreal-macos-arm ./cmd/main.go
 
 build:
+	go mod tidy
 	go build -o surreal ./cmd/main.go
 
 run:

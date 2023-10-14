@@ -253,7 +253,7 @@ func (sti *STI) cmdWriteText(input string, args []string) error {
 }
 
 func (sti *STI) cmdWriteByte(input string, args []string) error {
-	arr := byteFormat(sti, input)
+	arr := formatTheInput(sti, input)
 
 	for _, r := range arr {
 		var s string

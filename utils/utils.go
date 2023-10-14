@@ -15,7 +15,7 @@ func Contains(arr []string, element string) bool {
 	return false
 }
 
-func StringToByte(raw string) (byte, bool) {
+func IsSingleByteNotation(raw string) (byte, bool) {
 	if strings.HasPrefix(raw, "0x") {
 		raw = strings.TrimPrefix(raw, "0x")
 		val, err := strconv.ParseUint(raw, 16, 8)

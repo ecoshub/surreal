@@ -5,27 +5,24 @@ import (
 	"surreal/utils"
 )
 
-func byteFormat(sti *STI, input string) []byte {
-	if isStringInput(input) {
-		arr := make([]byte, 0, len(input))
-		for _, r := range input {
-			b, _ := utils.StringToByte(string(r))
-			arr = append(arr, b)
-		}
-		return arr
+func formatTheInput(sti *STI, input string) []byte {
+	inputBytes, ok := isText(input)
+	if !ok {
+		return inputBytes
 	}
-
-	inputBytes := utils.FormatUsingEOL(sti.settings.EOLEnable, sti.settings.EOL.Char, []byte(input))
-	return []byte(inputBytes)
+	inputBytes = utils.FormatUsingEOL(sti.settings.EOLEnable, sti.settings.EOL.Char, inputBytes)
+	return inputBytes
 }
 
-func isStringInput(input string) bool {
+func isText(input string) ([]byte, bool) {
 	words := strings.Split(input, " ")
+	arr := make([]byte, 0, len(input))
 	for _, n := range words {
-		_, ok := utils.StringToByte(n)
+		b, ok := utils.IsSingleByteNotation(n)
 		if !ok {
-			return false
+			return []byte(input), true
 		}
+		arr = append(arr, b)
 	}
-	return true
+	return arr, false
 }
