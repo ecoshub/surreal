@@ -57,7 +57,7 @@ Run from source code (*golang 1.2 required*)
 
 ![connecting](screenshot-connecting.png)
 
-When you start the program, it uses default configurations:
+Program starts with default configurations. Default configurations:
 
     path: ''
     baud: 115200
@@ -69,7 +69,7 @@ When you start the program, it uses default configurations:
     mode: text
     stop: false
 
-You can view this information by using the :info command.
+You can view this information by using the **:info** command.
 
 If you haven't provided a device path using the --path flag, the program will start with no connection state and display the following message:
 
