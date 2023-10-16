@@ -55,7 +55,7 @@ Run from source code (*golang 1.2 required*)
 
 ### Connecting
 
-![connecting](screenshot-connecting.png)
+<img src="./visuals/screenshot-connecting.png" alt="connecting" width="800"/>
 
 Program starts with default configurations. Default configurations:
 
@@ -87,7 +87,7 @@ You can change serial configurations like **baud** or **size** at any time, and 
 
 ### Communication
 
-![communication](screenshot-communication.png)
+<img src="./visuals/screenshot-communication.png" alt="communication" width="800"/>
 
 **Text Mode**
 
