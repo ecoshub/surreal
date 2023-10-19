@@ -1,7 +1,7 @@
 # Surreal Terminal
 *Serial Terminal CLI*
 
-**Surreal Terminal** is a command-line utility designed to provide a communication interface for **USB UART** or **RS232** serial devices. It offers essential functionality to connect, configure, and communicate with serial devices from your command line. **Surreal Terminal** offers key features such as on-the-fly communication configuration changes and data mode selection, making it a valuable tool for various applications.
+**Surreal** is a command-line program designed to provide a communication interface for **USB UART** or **RS232** serial devices. It offers essential functionality to connect, configure, and communicate with serial devices from your command line. **Surreal Terminal** offers key features such as on-the-fly communication configuration changes and output mode selection, makes it valuable tool.
 
 ## Features
 - Connect to USB UART or RS232 serial devices.
@@ -31,7 +31,7 @@ To run Surreal Terminal, you can obtain the executable from the [release page](h
         Stop bit. Options: 1|1.5|2. Default: 1 (default 1)
 ```
 
-You can exit from program using **ESC** key, **:exit** command or good old **CTRL+C**
+You can exit from program using **ESC** key, `:exit` command or good old **CTRL+C**
 
 ## How to build
 
@@ -69,13 +69,13 @@ Program starts with default configurations. Default configurations:
     mode: text
     stop: false
 
-You can view this information by using the **:info** command.
+You can view this information by using the `:info` command.
 
 If you haven't provided a device path using the --path flag, the program will start with no connection state and display the following message:
 
     serial device not connected. To connect a device please provide its path. example: ':path /dev/tty.usbserial-110'
 
-To provide a device path, use the **:path <device_path>** command as shown above. After providing a valid device path, you'll receive a success message:
+To provide a device path, use the `:path <device_path>` command as shown above. After providing a valid device path, you'll receive a success message:
 
     :path /dev/tty.usbserial-110
     => path: /dev/tty.usbserial-110
@@ -83,11 +83,13 @@ To provide a device path, use the **:path <device_path>** command as shown above
 
 *The arrow notation **(=>)** indicates the changed value of the setting.*
 
-You can change serial configurations like **baud** or **size** at any time, and it will change its configurations immediately.
+You can change any configuration (**baud**, **size** etc) at any time, and it will change its configurations immediately.
 
 ### Communication
 
 <img src="./visuals/screenshot-communication.png" alt="communication" width="800"/>
+
+**Output Modes**
 
 **Text Mode**
 
@@ -98,7 +100,7 @@ In text mode, any text you write in the terminal will be immediately sent to the
 
 **Byte Mode**
 
-You can change the output mode to byte using the :mode byte command, or simply use a blank :mode command to toggle between text mode and byte mode. Here's an example of a "Hello" message in byte mode:
+You can change the output mode to byte using the `:mode byte` command, or simply use a blank `:mode` command to toggle between text mode and byte mode. Here's an example of a "Hello" message in byte mode:
 
     [<<] h 0x68 0b01101000 104
     [<<] e 0x65 0b01100101 101
@@ -119,7 +121,7 @@ To add an end-of-line character to every text you send, enable and configure the
 
 Now, the program is adding 0x10 (LF, '\n') to the end of each line.
 
-You can also change the end-of-line character. For example, changing it to '\n\r' (LF CR) using the **:eol-char 0x0a0d** command:
+You can also change the end-of-line character. For example, changing it to '\n\r' (LF CR) using the `:eol-char 0x0a0d` command:
 
     :eol-char 0x0a0d
     => eol-char: 0x0a0d
@@ -132,7 +134,7 @@ You can also change the end-of-line character. For example, changing it to '\n\r
     [<<] . 0x0a 0b00001010 10
     [<<] . 0x0d 0b00001101 13
 
-You can stop printing with the **:stop** command, which toggles between *start* and *stop*.
+You can stop printing with the `:stop` command, which toggles between *start* and *stop*.
 
 ## Contributing
 Contributions to this project are welcome. If you have any suggestions, bug reports, or feature requests, please open an issue or submit a pull request.
