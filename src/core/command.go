@@ -124,7 +124,6 @@ func (sti *STI) cmdHelp(input string, args []string) {
 
 func (sti *STI) cmdSet(input string, args []string) {
 	sti.pushEcho(input)
-	sti.termScreen.CommandPalette.AddToHistory(input)
 
 	key := strings.TrimPrefix(args[0], ":")
 
@@ -134,11 +133,16 @@ func (sti *STI) cmdSet(input string, args []string) {
 	}
 
 	if utils.Contains(config.EditableConfigKeys, key) {
+		if value == "" {
+			sti.pushError(fmt.Errorf("value is null. to set a new value please provide key-value pair. example: ':baud 9600'"))
+			return
+		}
 		err := sti.editConfig(key, value)
 		if err != nil {
 			sti.pushError(err)
 			return
 		}
+		sti.termScreen.CommandPalette.AddToHistory(input)
 		return
 	} else if utils.Contains(settings.EditableSettingKeys, key) {
 		err := sti.editSetting(key, value)
@@ -146,6 +150,7 @@ func (sti *STI) cmdSet(input string, args []string) {
 			sti.pushError(err)
 			return
 		}
+		sti.termScreen.CommandPalette.AddToHistory(input)
 		return
 	}
 
@@ -181,7 +186,7 @@ func (sti *STI) editConfig(key, value string) error {
 			sti.Connect(sti.config)
 			sti.StartSerial()
 		}
-		return err
+		return fmt.Errorf("connection retry failed with new config. err: %s", err)
 	}
 
 	sti.config = temp
